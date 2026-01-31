@@ -4,6 +4,10 @@ on:
   push:
     branches: [master]
 
+permissions:  # THIS IS THE KEY FIX: Allows job to request OIDC token for AWS
+  id-token: write  # Required for configure-aws-credentials with role-arn
+  contents: read   # For actions/checkout
+
 jobs:
   build:
     runs-on: ubuntu-latest
