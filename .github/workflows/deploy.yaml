@@ -4,9 +4,9 @@ on:
   push:
     branches: [master]
 
-permissions:  # THIS IS THE KEY FIX: Allows job to request OIDC token for AWS
-  id-token: write  # Required for configure-aws-credentials with role-arn
-  contents: read   # For actions/checkout
+permissions:  
+  id-token: write  
+  contents: read   
 
 jobs:
   build:
@@ -20,9 +20,9 @@ jobs:
       - name: Install deps for Message-Service
         working-directory: ./Message-Service
         run: npm ci
-      - name: Test Message-Service  # Uncomment if tests exist
+      - name: Test Message-Service  
         working-directory: ./Message-Service
-        run: npm test || true  # '|| true' to ignore if no tests
+        run: npm test || true
       # Peeps-Service
       - name: Install deps for Peeps-Service
         working-directory: ./Peeps-Service
@@ -52,10 +52,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-arn: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}  # Changed from role-arn
           aws-region: ${{ secrets.AWS_REGION }}
+          audience: sts.amazonaws.com  # Keep if needed
+          output-env-credentials: true  # From your log—exports creds to env
       - run: aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REPO }}
-      # Build and push each service
       - run: docker build -t ${{ secrets.ECR_REPO }}/message-service:${{ github.sha }} ./Message-Service
       - run: docker push ${{ secrets.ECR_REPO }}/message-service:${{ github.sha }}
       - run: docker build -t ${{ secrets.ECR_REPO }}/peeps-service:${{ github.sha }} ./Peeps-Service
@@ -72,8 +73,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-arn: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}  # Changed from role-arn
           aws-region: ${{ secrets.AWS_REGION }}
+          audience: sts.amazonaws.com
+          output-env-credentials: true
       - run: aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER }} --region ${{ secrets.AWS_REGION }}
       - uses: azure/setup-helm@v4
       - run: helm upgrade --install microservices-app ./charts/microservices-app --set tag=${{ github.sha }} --set ecrRepo=${{ secrets.ECR_REPO }}
